@@ -1,6 +1,6 @@
 {
   "name": "omgacli",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "OMGA — self-improving AI coding agent for the terminal",
   "bin": {
     "omga": "bin/omga.js"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omga-cli"
-version = "3.2.2"
+version = "3.3.0"
 description = "OMGA — a self-improving AI coding agent for your terminal. Memory, skills, and tools that grow with you."
 readme = "README.md"
 license = { text = "MIT" }

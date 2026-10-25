@@ -1,0 +1,74 @@
+# Meta / CI
+.github/
+.gitignore
+.gitattributes
+.cursor/
+.omga/
+
+# Landing site (GitHub Pages only)
+website/
+
+# Tests & coverage
+tests/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+
+# Build artifacts
+dist/
+build/
+wheels/
+*.egg-info/
+*.egg
+*.whl
+
+# Local envs / secrets
+.venv/
+.venv.*/
+venv/
+env/
+node_modules/
+secrets.json
+api_keys.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Extra docs (npm always keeps README.md + LICENSE)
+AGENTS.md
+ACCESSIBILITY.md
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+
+# Runtime / bytecode
+*.log
+logs/
+state.sqlite
+state.sqlite-*
+cache.sqlite
+history.txt
+__pycache__/
+*.py[cod]
+*$py.class
+*.tmp
+*.bak
+.omga-install/
+package-lock.json

@@ -1,8 +1,5 @@
-# Deploy the static site in /website to GitHub Pages.
-#
-# One-time repo setup (required — without this, configure-pages fails with
-# "Get Pages site failed / Not Found"):
-#   Settings → Pages → Build and deployment → Source: GitHub Actions
+# Publish /website via the gh-pages branch (no configure-pages / Actions source required).
+# After the first successful run, the site is at https://<user>.github.io/<repo>/
 name: Deploy GitHub Pages
 
 on:
@@ -11,9 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -22,21 +18,45 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload website artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish website to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: website
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website
+          force_orphan: true
+          commit_message: "deploy(site): publish website"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Point Pages at gh-pages (create or update)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          API="https://api.github.com/repos/${{ github.repository }}/pages"
+          HDR=(-H "Authorization: Bearer ${GH_TOKEN}"
+               -H "Accept: application/vnd.github+json"
+               -H "X-GitHub-Api-Version: 2022-11-28")
+          BODY='{"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}'
+
+          # Create site if missing
+          CREATE=$(curl -sS -o /tmp/pages-create.json -w "%{http_code}" \
+            "${HDR[@]}" -X POST "$API" -d "$BODY")
+          echo "POST /pages → HTTP ${CREATE}"
+          cat /tmp/pages-create.json 2>/dev/null; echo
+
+          # Update source if site already exists (or create returned conflict)
+          UPDATE=$(curl -sS -o /tmp/pages-update.json -w "%{http_code}" \
+            "${HDR[@]}" -X PUT "$API" -d "$BODY")
+          echo "PUT /pages → HTTP ${UPDATE}"
+          cat /tmp/pages-update.json 2>/dev/null; echo
+
+          GET=$(curl -sS -o /tmp/pages-get.json -w "%{http_code}" "${HDR[@]}" "$API")
+          echo "GET /pages → HTTP ${GET}"
+          cat /tmp/pages-get.json 2>/dev/null; echo
+
+          # Soft success: branch is published even if token cannot admin-enable Pages.
+          # Fallback for humans: Settings → Pages → Deploy from a branch → gh-pages / (root)
+          exit 0

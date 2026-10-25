@@ -74,9 +74,8 @@ omga: Python CLI not found.
 Install options:
 
   curl -fsSL https://raw.githubusercontent.com/isPoori/omga/main/install.sh | bash
-
-  pip install omga-cli
-
+  npm i -g omgacli --prefix "$HOME/.local"   # then: export PATH="$HOME/.local/bin:$PATH"
+  pip install --user omga-cli
   git clone https://github.com/isPoori/omga.git && cd omga && pip install -e .
 
 Requires Python 3.10+.

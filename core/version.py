@@ -1,6 +1,6 @@
 """Single source of truth for the OMGA version string."""
 
-__version__ = "3.2.2"
+__version__ = "3.3.0"
 __author__ = "Pouria Hosseini"
 __email__ = "PouriaHosseini@outlook.com"
 __title__ = "OMGA"

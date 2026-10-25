@@ -1,14 +1,31 @@
 {
-  "name": "omga",
-  "version": "3.2.2",
+  "name": "omgacli",
+  "version": "3.3.0",
   "description": "OMGA — self-improving AI coding agent for the terminal",
-  "bin": { "omga": "bin/omga.js" },
-  "scripts": { "postinstall": "node scripts/postinstall.js" },
-  "engines": { "node": ">=18" },
-  "keywords": ["ai", "cli", "coding-agent", "omga"],
+  "bin": {
+    "omga": "bin/omga.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "prepack": "find . -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "coding-agent",
+    "omga"
+  ],
   "license": "MIT",
   "homepage": "https://ispoori.github.io/omga/",
-  "repository": { "type": "git", "url": "https://github.com/isPoori/omga.git" },
-  "bugs": { "url": "https://github.com/isPoori/omga/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/isPoori/omga.git"
+  },
+  "bugs": {
+    "url": "https://github.com/isPoori/omga/issues"
+  },
   "author": "Pouria Hosseini"
 }

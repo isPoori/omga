@@ -51,8 +51,26 @@ irm https://raw.githubusercontent.com/isPoori/omga/main/install.ps1 | iex
 
 ### npm
 
+Package name on the registry is **`omgacli`** (the CLI binary is still `omga`):
+
 ```bash
-npm i -g omga
+npm i -g omgacli
+```
+
+If you hit `EACCES` / permission denied under `/usr/lib/node_modules`, install into your user prefix instead of using `sudo`:
+
+```bash
+mkdir -p "$HOME/.local"
+npm i -g omgacli --prefix "$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+To make that permanent:
+
+```bash
+npm config set prefix "$HOME/.local"
+# add to ~/.bashrc or ~/.zshrc:
+# export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### pip / source

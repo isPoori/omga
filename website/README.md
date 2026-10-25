@@ -17,11 +17,9 @@ Any static file server works (e.g. `npx serve .`).
 
 ## Deploy
 
-Pushes to `main` run `.github/workflows/pages.yml` (uploads the `website/` folder).
+Pushes to `main` run `.github/workflows/pages.yml`, which publishes `website/` to the `gh-pages` branch and tries to point Pages at that branch.
 
-**Required once** (admin): GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-
-If Source is not set to GitHub Actions, the workflow fails at `configure-pages` with `Get Pages site failed` / `Not Found`.
+If the site URL is still empty after the first green run: **Settings → Pages → Deploy from a branch → `gh-pages` / root**.
 
 ## Structure
 

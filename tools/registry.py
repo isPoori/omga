@@ -60,6 +60,11 @@ class ToolRegistry:
         for tool in process_tools():
             self.add(tool)
 
+        from tools.browser import browser_tools
+
+        for tool in browser_tools():
+            self.add(tool)
+
         if self.store is not None:
             from tools.memory_tools import memory_tools
 

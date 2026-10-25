@@ -277,6 +277,20 @@ def _check_ripgrep() -> Check:
     )
 
 
+def _check_browser() -> Check:
+    from tools.browser import find_browser
+
+    path = find_browser()
+    if path:
+        return Check("Browser", True, detail=path)
+    return Check(
+        "Browser",
+        False,
+        detail="Optional — Chrome/Chromium for web_search / browse_page.",
+        fix="(warn) Install chromium or google-chrome, or set OMGA_BROWSER=/path/to/chrome",
+    )
+
+
 def _repair_ripgrep() -> str:
     system = platform.system().lower()
     if system == "darwin" and shutil.which("brew"):
@@ -397,6 +411,7 @@ def gather_checks() -> list[Check]:
         _check_memory(),
         _check_skills(),
         _check_git(),
+        _check_browser(),
         _check_ripgrep(),
         _check_path(),
     ]

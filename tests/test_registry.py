@@ -19,6 +19,7 @@ def test_registry_includes_new_tools(tmp_path, monkeypatch):
     names = set(reg.names())
     for expected in (
         "read_file", "edit_file", "write_file", "search", "run_command",
+        "web_search", "browse_page",
         "remember", "recall", "search_sessions", "load_skill", "list_skills",
         "create_skill", "poll_process", "delegate_task",
     ):

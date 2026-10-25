@@ -1609,7 +1609,7 @@ def _tool_icon(name: str, glyphs: Glyphs) -> tuple[str, str]:
         return glyphs.file, "info"
     if name in ("write_file", "edit_file", "delete_file"):
         return glyphs.edit, "warning"
-    if name in ("search", "grep", "recall", "search_sessions"):
+    if name in ("search", "grep", "recall", "search_sessions", "web_search", "browse_page"):
         return glyphs.search, "accent"
     if name == "run_command":
         return glyphs.shell, "tool"
@@ -1627,6 +1627,8 @@ def _op_for_tool(name: str) -> str:
         "edit_file": "Editing",
         "delete_file": "Editing",
         "search": "Searching",
+        "web_search": "Searching",
+        "browse_page": "Reading",
         "run_command": "RunningCommand",
         "git_status": "Reading",
         "git_diff": "Reading",
@@ -1692,6 +1694,20 @@ def _tool_label(name: str, args: dict, *, running: bool, result: Any = None) -> 
         if skipped:
             extra += f"  ·  skipped {', '.join(skipped[:3])}"
         return f"List {loc}{extra}"
+    if name == "web_search":
+        q = str(args.get("query") or data.get("query") or "")
+        eng = str(data.get("engine") or args.get("engine") or "web")
+        n = data.get("count")
+        shown = f'"{truncate(q, 48)}"' if q else "web"
+        if running:
+            return f"Web search {shown}"
+        extra = f"  ·  {n} hits" if n is not None else ""
+        return f"Web search {shown}  ·  {eng}{extra}"
+    if name == "browse_page":
+        url = str(args.get("url") or data.get("url") or "")
+        title = str(data.get("title") or "")
+        shown = truncate(title or url, 56) or "page"
+        return f"{'Browsing' if running else 'Browsed'} {shown}"
     if name in ("search", "grep"):
         pat = str(args.get("pattern") or args.get("query") or data.get("pattern") or "")
         scope = str(args.get("path") or "")
@@ -1862,6 +1878,7 @@ def _settings_info(category: str) -> list[str]:
         ],
         "tools": [
             "Files, edit_file, search, shell, git,",
+            "web_search, browse_page (Chrome/Chromium),",
             "memory, skills, poll_process, delegate_task.",
         ],
         "git": ["Git status is shown in the session footer. OMGA never auto-commits."],

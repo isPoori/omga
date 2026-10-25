@@ -1,0 +1,59 @@
+# OMGA configuration example — copy to ~/.config/omga/config.yaml
+# Secrets (API keys) belong in ~/.config/omga/secrets.json only.
+
+schema_version: 3
+provider: openrouter
+model: null
+theme: ink
+mode: agent
+safe_mode: false
+
+endpoints: {}
+trusted_workspaces: []
+
+# Network / Cloudflare bypass (OpenRouter):
+#   /proxy 7890
+#   /proxy socks5://127.0.0.1:1080
+#   /proxy off                 # force direct (ignore HTTPS_PROXY)
+#   /proxy clear               # fall back to process env
+#   /proxy test
+network:
+  https_proxy: null          # null=env · __direct__=force off · or a URL
+  http_transport: auto       # auto | curl | requests
+
+interface:
+  unicode: auto
+  animations: true
+  status_bar: true
+  alternate_screen: true
+  show_tool_args: true
+
+agent:
+  max_iterations: 60
+  command_timeout: 120
+  confirm_destructive: true
+  auto_approve: false
+  compress_context: true
+  persist_sessions: true
+  enable_memory: true
+  enable_skills: true
+  enable_delegate: true
+  system_access: true
+  subagent_max_iterations: 25
+
+memory:
+  inject_profile: true
+  max_recall: 8
+
+security:
+  redact_secrets: true
+  confirm_destructive: true
+
+system:
+  temperature: 0.7
+  max_tokens: 8192
+  timeout_seconds: 90
+  confirm_destructive: true
+  cache_responses: true
+  debug: false
+  retries: 2

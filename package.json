@@ -1,0 +1,12 @@
+{
+  "name": "omga-cli",
+  "version": "3.2.2",
+  "description": "OMGA — self-improving AI coding agent for the terminal",
+  "bin": { "omga": "bin/omga.js" },
+  "scripts": { "postinstall": "node scripts/postinstall.js" },
+  "engines": { "node": ">=18" },
+  "keywords": ["ai", "cli", "coding-agent", "omga"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/isPoori/omga.git" },
+  "author": "Pouria Hosseini"
+}

@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+*.egg
+*.pyo
+
+# Virtual environments / local installs
+.venv/
+.venv.*/
+venv/
+env/
+.env/
+
+# Build / packaging
+dist/
+build/
+wheels/
+*.whl
+
+# Test / lint / type caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+
+# Tooling / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets — NEVER commit
+api_keys.json
+secrets.json
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Local runtime DB / caches accidentally created in-repo
+/state.sqlite
+/state.sqlite-*
+/cache.sqlite
+/history.txt
+/config.json
+/config.yaml
+
+# npm
+node_modules/
+npm-debug.log*
+
+# Installer scratch
+.omga-install/
+*.tmp
+*.bak

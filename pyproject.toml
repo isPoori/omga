@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omga-cli"
+version = "3.2.2"
+description = "OMGA — a self-improving AI coding agent for your terminal. Memory, skills, and tools that grow with you."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Pouria Hosseini", email = "geekpouria@gmail.com" }]
+keywords = [
+    "cli", "ai", "coding-assistant", "coding-agent", "developer-tools",
+    "openrouter", "openai", "anthropic", "ollama", "terminal", "tui",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Terminals",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "click>=8.1.0",
+    "rich>=13.7.0",
+    "requests>=2.31.0",
+    "PyYAML>=6.0",
+    "PySocks>=1.7.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "responses>=0.25.0",
+]
+dev = [
+    "pytest>=7.0",
+    "mypy>=1.0",
+    "ruff>=0.4.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/isPoori/omga"
+Repository = "https://github.com/isPoori/omga"
+Documentation = "https://ispoori.github.io/omga/"
+
+[project.scripts]
+omga = "cli.main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+        "agent*",
+    "tools*",
+    "providers*",
+    "ui*",
+    "cli*",
+    "memory*",
+    "skills*",
+    "context*",
+    "config*",
+    "core*",
+]
+exclude = ["tests*", "website*", "scripts*"]
+
+[tool.setuptools.package-data]
+skills = ["bundled/**/*.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

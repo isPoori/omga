@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="OMGA — a self-improving AI coding agent for your terminal. Memory, skills, and tools that grow with you."
+    />
+    <meta name="theme-color" content="#0c0a09" />
+    <title>OMGA — Terminal AI coding agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,8..60,400;0,8..60,500;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="logo" href="#" aria-label="OMGA home">
+          <span class="logo-mark" aria-hidden="true">◈</span>
+          <span class="logo-text">OMGA</span>
+        </a>
+        <button
+          type="button"
+          class="nav-toggle"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          aria-label="Open menu"
+        >
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+        </button>
+        <nav id="site-nav" class="nav" aria-label="Primary">
+          <a href="#install">Install</a>
+          <a href="#features">Features</a>
+          <a href="#commands">Commands</a>
+          <a href="#docs">Docs</a>
+          <a
+            class="nav-github"
+            href="https://github.com/isPoori/omga"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-inner">
+          <img
+            class="hero-mark reveal"
+            src="assets/omga-mark.svg"
+            width="72"
+            height="72"
+            alt=""
+          />
+          <p class="hero-brand reveal" aria-hidden="true">OMGA</p>
+          <h1 id="hero-title" class="reveal reveal-delay-1">
+            Your terminal agent that remembers.
+          </h1>
+          <p class="hero-lede reveal reveal-delay-2">
+            A self-improving coding agent with durable memory, reusable skills,
+            and tools that grow across sessions.
+          </p>
+          <div class="hero-cta reveal reveal-delay-3">
+            <a class="btn btn-primary" href="#install">Install OMGA</a>
+            <a
+              class="btn btn-ghost"
+              href="https://github.com/isPoori/omga"
+              target="_blank"
+              rel="noopener noreferrer"
+              >View on GitHub</a
+            >
+          </div>
+          <p class="hero-aside reveal reveal-delay-4">
+            Memory-powered · Skill-focused · Built for the terminal
+          </p>
+        </div>
+      </section>
+
+      <section id="install" class="section">
+        <div class="section-inner">
+          <header class="section-head">
+            <p class="eyebrow">Get started</p>
+            <h2>Install</h2>
+            <p>
+              Needs Python 3.10+. After install, run <code>omga</code> — the
+              first launch opens a short setup wizard for provider and API key.
+            </p>
+          </header>
+
+          <div class="install-stack">
+            <article class="install-card">
+              <div class="install-card-top">
+                <span class="install-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <rect x="3" y="4" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.75"/>
+                    <path d="M7 20h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                    <path d="M8 9h3.5M8 12h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <h3>Linux &amp; macOS</h3>
+                  <p class="install-note">One-line installer · recommended</p>
+                </div>
+              </div>
+              <div class="cmd-box">
+                <div class="cmd-meta">
+                  <span class="cmd-chip">bash</span>
+                  <button type="button" class="copy-btn" data-copy="cmd-unix-a" aria-label="Copy Linux/macOS install command">
+                    <svg class="copy-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none">
+                      <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                      <path d="M5 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <pre class="cmd-pre"><code id="cmd-unix-a">curl -fsSL https://ispoori.github.io/omga/install.sh | bash</code></pre>
+              </div>
+              <div class="cmd-box cmd-box--alt">
+                <div class="cmd-meta">
+                  <span class="cmd-chip">alt</span>
+                  <button type="button" class="copy-btn copy-btn--ghost" data-copy="cmd-unix-b" aria-label="Copy alternative install command">
+                    <svg class="copy-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none">
+                      <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                      <path d="M5 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <pre class="cmd-pre"><code id="cmd-unix-b">curl -fsSL https://raw.githubusercontent.com/isPoori/omga/main/install.sh | bash</code></pre>
+              </div>
+            </article>
+
+            <article class="install-card">
+              <div class="install-card-top">
+                <span class="install-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <path d="M4 6.5h7.5V4H4v2.5zm0 13.5h7.5v-2.5H4V20zM4 14h7.5v-4H4v4zm9.5-7.5H20V4h-6.5v2.5zm0 13.5H20v-2.5h-6.5V20zm0-5.5H20v-4h-6.5v4z" fill="currentColor"/>
+                  </svg>
+                </span>
+                <div>
+                  <h3>Windows</h3>
+                  <p class="install-note">PowerShell · run as user</p>
+                </div>
+              </div>
+              <div class="cmd-box">
+                <div class="cmd-meta">
+                  <span class="cmd-chip">powershell</span>
+                  <button type="button" class="copy-btn" data-copy="cmd-win" aria-label="Copy Windows install command">
+                    <svg class="copy-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none">
+                      <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                      <path d="M5 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="copy-label">Copy</span>
+                  </button>
+                </div>
+                <pre class="cmd-pre"><code id="cmd-win">irm https://raw.githubusercontent.com/isPoori/omga/main/install.ps1 | iex</code></pre>
+              </div>
+            </article>
+
+            <article class="install-card">
+              <div class="install-card-top">
+                <span class="install-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                    <path d="M12 3l7 4v5c0 4.5-3 8.2-7 9.5C8 20.2 5 16.5 5 12V7l7-4z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+                    <path d="M9.5 12.2l1.7 1.7 3.4-3.8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <h3>Package managers</h3>
+                  <p class="install-note">npm or pip · then run <code>omga</code></p>
+                </div>
+              </div>
+              <div class="cmd-pair">
+                <div class="cmd-box">
+                  <div class="cmd-meta">
+                    <span class="cmd-chip">npm</span>
+                    <button type="button" class="copy-btn" data-copy="cmd-npm" aria-label="Copy npm install command">
+                      <svg class="copy-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none">
+                        <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M5 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                      <span class="copy-label">Copy</span>
+                    </button>
+                  </div>
+                  <pre class="cmd-pre"><code id="cmd-npm">npm i -g omga-cli</code></pre>
+                </div>
+                <div class="cmd-box">
+                  <div class="cmd-meta">
+                    <span class="cmd-chip">pip</span>
+                    <button type="button" class="copy-btn" data-copy="cmd-pip" aria-label="Copy pip install command">
+                      <svg class="copy-svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none">
+                        <rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M5 16V6a2 2 0 0 1 2-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                      <span class="copy-label">Copy</span>
+                    </button>
+                  </div>
+                  <pre class="cmd-pre"><code id="cmd-pip">pip install omga-cli</code></pre>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section section--band">
+        <div class="section-inner">
+          <header class="section-head">
+            <p class="eyebrow">Capabilities</p>
+            <h2>Features</h2>
+            <p>Built for long sessions, real repos, and habits that stick.</p>
+          </header>
+          <ul class="feature-list">
+            <li>
+              <strong>Memory</strong>
+              SQLite sessions with FTS search, <code>USER.md</code> /
+              <code>MEMORY.md</code>, and <code>remember</code> /
+              <code>recall</code> tools.
+            </li>
+            <li>
+              <strong>Skills</strong>
+              agentskills.io playbooks — bundled defaults plus your own under
+              <code>~/.config/omga/skills</code>.
+            </li>
+            <li>
+              <strong>Surgical edits</strong>
+              Prefer precise <code>edit_file</code> over full rewrites, with
+              diffs and approval.
+            </li>
+            <li>
+              <strong>Scale</strong>
+              Context compression, subagent delegation, and background process
+              polling.
+            </li>
+            <li>
+              <strong>Project context</strong>
+              Loads <code>AGENTS.md</code>, <code>.omga/rules.md</code>, and
+              related instruction files automatically.
+            </li>
+            <li>
+              <strong>Providers</strong>
+              OpenRouter, OpenAI, Anthropic, Groq, Ollama, and more — keys in
+              <code>secrets.json</code> only.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="commands" class="section">
+        <div class="section-inner">
+          <header class="section-head">
+            <p class="eyebrow">Reference</p>
+            <h2>Commands</h2>
+            <p>CLI entry points and in-session slash commands.</p>
+          </header>
+          <div class="commands-grid">
+            <div>
+              <h3 class="commands-sub">CLI</h3>
+              <dl class="cmd-dl">
+                <div>
+                  <dt><code>omga</code></dt>
+                  <dd>Start a session</dd>
+                </div>
+                <div>
+                  <dt><code>omga init</code></dt>
+                  <dd>Setup wizard</dd>
+                </div>
+                <div>
+                  <dt><code>omga config</code></dt>
+                  <dd>Show configuration</dd>
+                </div>
+                <div>
+                  <dt><code>omga config model</code></dt>
+                  <dd>Change model</dd>
+                </div>
+                <div>
+                  <dt><code>omga doctor</code></dt>
+                  <dd>Diagnostics</dd>
+                </div>
+                <div>
+                  <dt><code>omga version</code></dt>
+                  <dd>Version info</dd>
+                </div>
+              </dl>
+            </div>
+            <div>
+              <h3 class="commands-sub">Session</h3>
+              <div class="slash-wrap">
+                <p class="slash-block">
+                  <code>/ask</code> <code>/plan</code> <code>/agent</code>
+                  <code>/think</code> <code>/debug</code> <code>/review</code>
+                </p>
+                <p class="slash-block">
+                  <code>/memory</code> <code>/skills</code>
+                  <code>/sessions</code> <code>/compress</code> <code>/key</code>
+                  <code>/copy</code>
+                </p>
+                <p class="slash-block">
+                  <code>/model</code> <code>/provider</code> <code>/theme</code>
+                  <code>/status</code> <code>/usage</code> <code>/clear</code>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="docs" class="section section--docs">
+        <div class="section-inner docs-cta">
+          <p class="eyebrow">Go deeper</p>
+          <h2>Documentation</h2>
+          <p>
+            Setup, configuration, and architecture notes live in the repository
+            README and <code>AGENTS.md</code>.
+          </p>
+          <a
+            class="btn btn-primary"
+            href="https://github.com/isPoori/omga#readme"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Read the docs on GitHub</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <p>
+          <a href="https://pouriahosseini.ir" target="_blank" rel="noopener noreferrer"
+            >Pouria Hosseini</a
+          >
+          ·
+          <a
+            href="https://github.com/isPoori/omga/blob/main/LICENSE"
+            target="_blank"
+            rel="noopener noreferrer"
+            >MIT License</a
+          >
+        </p>
+        <p class="footer-meta">OMGA · terminal-native AI coding agent</p>
+      </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>

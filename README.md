@@ -14,6 +14,7 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0ea5a0?style=flat-square" alt="MIT" /></a>
   <a href="https://ispoori.github.io/omga/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-f97316?style=flat-square" alt="Docs" /></a>
+  <a href="https://pepy.tech/projects/omga-cli"><img src="https://static.pepy.tech/personalized-badge/omga-cli?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
 </p>
 
 ---

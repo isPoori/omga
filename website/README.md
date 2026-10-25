@@ -17,9 +17,11 @@ Any static file server works (e.g. `npx serve .`).
 
 ## Deploy
 
-Pushes to `main` that touch `website/` are deployed by `.github/workflows/pages.yml`.
+Pushes to `main` run `.github/workflows/pages.yml` (uploads the `website/` folder).
 
-In the GitHub repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+**Required once** (admin): GitHub repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+
+If Source is not set to GitHub Actions, the workflow fails at `configure-pages` with `Get Pages site failed` / `Not Found`.
 
 ## Structure
 

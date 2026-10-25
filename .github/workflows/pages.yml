@@ -1,3 +1,8 @@
+# Deploy the static site in /website to GitHub Pages.
+#
+# One-time repo setup (required — without this, configure-pages fails with
+# "Get Pages site failed / Not Found"):
+#   Settings → Pages → Build and deployment → Source: GitHub Actions
 name: Deploy GitHub Pages
 
 on:
@@ -12,7 +17,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -21,9 +26,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure Pages
+      - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload website artifact

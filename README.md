@@ -52,7 +52,7 @@ irm https://raw.githubusercontent.com/isPoori/omga/main/install.ps1 | iex
 ### npm
 
 ```bash
-npm i -g omga-cli
+npm i -g omga
 ```
 
 ### pip / source

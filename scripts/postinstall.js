@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * After npm install: try to ensure the Python omga-cli package is available.
+ * After `npm i -g omga`: try to ensure the Python backend (PyPI: omga-cli) is available.
  */
 const { spawnSync } = require("child_process");
 const fs = require("fs");
@@ -51,20 +51,20 @@ function main() {
   if (fs.existsSync(pyproject)) {
     const r = pipInstall(["-e", repoRoot]);
     if (r.ok) {
-      console.log("omga-cli (npm): installed Python package from local repository.");
+      console.log("omga (npm): installed Python package from local repository.");
       return;
     }
   }
 
-  // Published npm package: try PyPI name (same as setuptools project)
+  // Published npm package: install backend from PyPI (setuptools name: omga-cli)
   const r = pipInstall(["--user", "omga-cli"]);
   if (r.ok) {
-    console.log("omga-cli (npm): installed Python package via pip (--user).");
+    console.log("omga (npm): installed Python package via pip (--user).");
     return;
   }
 
   console.warn(`
-omga-cli (npm): could not install the Python backend automatically.
+omga (npm): could not install the Python backend automatically.
 
 The \`omga\` command needs Python 3.10+ and the omga-cli package. Try one of:
 

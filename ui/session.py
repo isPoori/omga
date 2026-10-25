@@ -1878,7 +1878,7 @@ def _settings_info(category: str) -> list[str]:
         ],
         "tools": [
             "Files, edit_file, search, shell, git,",
-            "web_search, browse_page (Chrome/Chromium),",
+            "web_search, browse_page (HTTP; Chrome opt-in),",
             "memory, skills, poll_process, delegate_task.",
         ],
         "git": ["Git status is shown in the session footer. OMGA never auto-commits."],

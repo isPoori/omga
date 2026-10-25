@@ -1,14 +1,58 @@
-"""Browser discovery + HTML result parsing (no live network required)."""
+"""Browser discovery + policy gates (no Chromium spawn on default path)."""
 
 from tools import browser as br
 
 
 def test_find_browser_on_this_system():
-    # Soft assertion: machine may or may not have Chrome; function must not crash.
     path = br.find_browser()
-    info = br.browser_info()
+    info = br.browser_info(resolve_binary=True)
     assert "available" in info
     assert info["available"] is bool(path)
+
+
+def test_http_mode_never_allows_chrome():
+    orig = br._cfg_mode
+    br._cfg_mode = lambda: "http"
+    try:
+        assert br._chrome_allowed(use_browser=False) is False
+        assert br._chrome_allowed(use_browser=True) is False
+    finally:
+        br._cfg_mode = orig
+
+
+def test_allow_mode_requires_explicit_flag():
+    orig = br._cfg_mode
+    br._cfg_mode = lambda: "allow"
+    try:
+        assert br._chrome_allowed(use_browser=False) is False
+        assert br._chrome_allowed(use_browser=True) is True
+    finally:
+        br._cfg_mode = orig
+
+
+def test_web_search_does_not_spawn_chrome():
+    orig_mode = br._cfg_mode
+    orig_chrome = br._chrome_dump_dom
+    orig_http = br._http_get
+    br._cfg_mode = lambda: "http"
+
+    def boom(*_a, **_k):
+        raise AssertionError("Chromium must not start on default web_search")
+
+    br._chrome_dump_dom = boom
+    br._http_get = lambda url, timeout=20: (
+        '<li class="b_algo"><h2><a href="https://example.com/a">Example A</a></h2>'
+        "<p>Snippet</p></li>"
+    )
+    try:
+        out = br.web_search("example", max_results=3)
+        assert out["fetch"] == "http"
+        assert out["browser"] is None
+        assert out["count"] >= 1
+    finally:
+        br._cfg_mode = orig_mode
+        br._chrome_dump_dom = orig_chrome
+        br._http_get = orig_http
 
 
 def test_parse_ddg_html():
@@ -53,6 +97,8 @@ def test_browser_tools_registered_schema():
         schema = t.to_openai()
         assert schema["type"] == "function"
         assert "parameters" in schema["function"]
+        props = schema["function"]["parameters"]["properties"]
+        assert "use_browser" in props
 
 
 def test_unwrap_bing_tracking_url():

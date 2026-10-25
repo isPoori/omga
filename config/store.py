@@ -92,6 +92,13 @@ DEFAULTS: dict[str, Any] = {
         "inject_profile": True,
         "max_recall": 8,
     },
+    "tools": {
+        # Browser rendering for web_search / browse_page:
+        #   off|http = never launch Chrome/Chromium (default — fast, weak PCs)
+        #   allow    = Chromium only when the tool is called with use_browser=true
+        #   chrome   = always use headless Chromium (heavy)
+        "browser": {"mode": "http"},
+    },
     "security": {
         "redact_secrets": True,
         "confirm_destructive": True,

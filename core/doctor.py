@@ -278,16 +278,20 @@ def _check_ripgrep() -> Check:
 
 
 def _check_browser() -> Check:
-    from tools.browser import find_browser
+    from tools.browser import browser_info
 
-    path = find_browser()
-    if path:
-        return Check("Browser", True, detail=path)
+    info = browser_info(resolve_binary=False)
+    mode = info.get("mode") or "http"
+    detail = info.get("hint") or f"mode={mode}"
     return Check(
         "Browser",
-        False,
-        detail="Optional — Chrome/Chromium for web_search / browse_page.",
-        fix="(warn) Install chromium or google-chrome, or set OMGA_BROWSER=/path/to/chrome",
+        True,
+        detail=detail,
+        fix=(
+            ""
+            if mode == "http"
+            else "(info) tools.browser.mode=http → web tools never spawn Chromium"
+        ),
     )
 
 

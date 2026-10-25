@@ -1,8 +1,9 @@
 """
-System Chrome / Chromium browser tools for live web search and page reading.
+Live web search + page reading for the OMGA agent.
 
-Uses a real browser binary in headless mode (preferred) with an HTTP fallback
-so the agent can research docs, errors, and APIs without inventing facts.
+Default path is lightweight HTTP (requests). Chromium/Chrome is used only when
+explicitly requested or as a last-resort fallback — launching a full browser for
+every search was hanging terminals and thrashing machines.
 """
 
 from __future__ import annotations
@@ -11,9 +12,11 @@ import base64
 import html as html_lib
 import os
 import re
+import signal
 import shutil
 import subprocess
 import tempfile
+import threading
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -51,9 +54,12 @@ _MAC_CANDIDATES = (
     "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
 )
 
-_MAX_DOM_CHARS = 400_000
-_MAX_TEXT_CHARS = 24_000
-_DEFAULT_TIMEOUT = 45
+_MAX_DOM_CHARS = 250_000
+_MAX_TEXT_CHARS = 20_000
+_DEFAULT_TIMEOUT = 20
+_CHROME_TIMEOUT = 18
+_BROWSER_LOCK = threading.Lock()
+_BROWSER_BUSY = False
 
 _USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -61,8 +67,41 @@ _USER_AGENT = (
 )
 
 
+def _cfg_mode() -> str:
+    """Normalize browser policy: http | allow | chrome.
+
+    - http/off: never spawn Chrome (default)
+    - allow/auto: Chrome only if the tool call passes use_browser=true
+    - chrome: always try headless Chrome
+    """
+    try:
+        from config.store import get
+
+        mode = str(get("tools.browser.mode", "http") or "http").lower().strip()
+    except Exception:
+        mode = (os.environ.get("OMGA_BROWSER_MODE") or "http").lower().strip()
+    if mode in ("off", "http", "none", "disabled"):
+        return "http"
+    if mode in ("allow", "auto", "optional"):
+        return "allow"
+    if mode in ("chrome", "browser", "chromium"):
+        return "chrome"
+    return "http"
+
+
+def _chrome_allowed(*, use_browser: bool = False) -> bool:
+    """Gate: Chromium must not start just because a web tool was invoked."""
+    mode = _cfg_mode()
+    if mode == "http":
+        return False
+    if mode == "chrome":
+        return True
+    # mode == allow
+    return bool(use_browser)
+
+
 def find_browser() -> str | None:
-    """Locate a Chrome/Chromium-family binary on this machine."""
+    """Locate a Chrome/Chromium-family binary (path lookup only — never launches)."""
     env = (os.environ.get("OMGA_BROWSER") or os.environ.get("CHROME_PATH") or "").strip()
     if env and Path(env).exists():
         return env
@@ -90,24 +129,59 @@ def find_browser() -> str | None:
     return None
 
 
-def browser_info() -> dict[str, Any]:
-    path = find_browser()
+def browser_info(*, resolve_binary: bool = False) -> dict[str, Any]:
+    """Status for doctor / diagnostics. Skips binary scan unless asked."""
+    mode = _cfg_mode()
+    path = find_browser() if resolve_binary or mode != "http" else None
     return {
-        "available": bool(path),
+        "available": bool(path) if path is not None else None,
         "path": path,
+        "mode": mode,
         "hint": (
-            "Using system browser for web_search / browse_page."
-            if path
-            else "No Chrome/Chromium found — web tools fall back to HTTP. "
-            "Install chromium/google-chrome or set OMGA_BROWSER."
+            f"mode={mode} · HTTP-only (Chrome never auto-starts)"
+            if mode == "http"
+            else (
+                f"mode={mode} · Chrome on demand"
+                + (f" · {path}" if path else " · binary not found")
+            )
         ),
     }
 
 
-def _chrome_dump_dom(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
+def _kill_process_tree(proc: subprocess.Popen) -> None:
+    """Hard-kill Chromium and its zygote/renderer children."""
+    if proc.poll() is not None:
+        return
+    try:
+        if os.name != "nt":
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                proc.kill()
+        else:
+            proc.kill()
+    except Exception:
+        pass
+    try:
+        proc.wait(timeout=2)
+    except Exception:
+        pass
+
+
+def _chrome_dump_dom(url: str, *, timeout: int = _CHROME_TIMEOUT) -> str:
+    """One headless Chromium dump — serialized, hard-killed on timeout."""
+    global _BROWSER_BUSY
     browser = find_browser()
     if not browser:
         raise ToolError("No Chrome/Chromium browser found on this system.")
+
+    # Never stack multiple Chromium launches (that was freezing machines).
+    if not _BROWSER_LOCK.acquire(timeout=1.5):
+        raise ToolError("Browser busy — another page fetch is in progress.")
+    if _BROWSER_BUSY:
+        _BROWSER_LOCK.release()
+        raise ToolError("Browser busy — another page fetch is in progress.")
+    _BROWSER_BUSY = True
 
     root = tempfile.mkdtemp(prefix="omga-chrome-")
     profile = Path(root) / "profile"
@@ -117,7 +191,12 @@ def _chrome_dump_dom(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
     for d in (profile, runtime, cfg, cache):
         d.mkdir(parents=True, exist_ok=True)
 
-    base_flags = [
+    timeout = max(8, min(int(timeout or _CHROME_TIMEOUT), 30))
+    cmd = [
+        browser,
+        "--headless=new",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
         "--disable-gpu",
         "--no-first-run",
         "--no-default-browser-check",
@@ -125,22 +204,23 @@ def _chrome_dump_dom(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
         "--disable-background-networking",
         "--disable-sync",
         "--disable-translate",
-        "--disable-features=TranslateUI,BlinkGenPropertyTrees",
+        "--disable-features=TranslateUI,BlinkGenPropertyTrees,AudioServiceOutOfProcess",
         "--disable-component-update",
         "--disable-default-apps",
+        "--disable-software-rasterizer",
         "--mute-audio",
         "--hide-scrollbars",
+        "--single-process",  # fewer child processes; much lighter for dump-dom
         f"--user-data-dir={profile}",
         f"--crash-dumps-dir={Path(root) / 'crashes'}",
         f"--user-agent={_USER_AGENT}",
-        "--virtual-time-budget=15000",
-        "--run-all-compositor-stages-before-draw",
+        "--virtual-time-budget=8000",
+        "--timeout=10000",
         "--dump-dom",
         url,
     ]
-    # Sandbox often blocks headless in containers; opt-in via OMGA_BROWSER_SANDBOX=1.
-    if os.environ.get("OMGA_BROWSER_SANDBOX", "").lower() not in ("1", "true", "yes"):
-        base_flags = ["--no-sandbox", "--disable-dev-shm-usage", *base_flags]
+    if os.environ.get("OMGA_BROWSER_SANDBOX", "").lower() in ("1", "true", "yes"):
+        cmd = [c for c in cmd if c != "--no-sandbox"]
 
     env = {
         **os.environ,
@@ -151,57 +231,77 @@ def _chrome_dump_dom(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
         "CHROME_HEADLESS": "1",
     }
 
-    last_err = ""
-    timed_out = False
+    proc: subprocess.Popen | None = None
     try:
-        for headless in ("--headless=new", "--headless"):
-            cmd = [browser, headless, *base_flags]
-            try:
-                proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=max(10, int(timeout)),
-                    env=env,
-                )
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                last_err = f"timeout with {headless}"
-                continue
-            dom = (proc.stdout or "").strip()
-            if dom and ("<html" in dom.lower() or "<!doctype" in dom.lower() or len(dom) > 200):
-                if len(dom) > _MAX_DOM_CHARS:
-                    dom = dom[:_MAX_DOM_CHARS]
-                return dom
-            err = (proc.stderr or "").strip()
-            last_err = f"{headless} exit {proc.returncode}: {err[:500]}"
-        if timed_out and not last_err.startswith("timeout"):
-            last_err = "timeout"
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+            start_new_session=(os.name != "nt"),
+        )
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_process_tree(proc)
+            raise ToolError(f"Browser timed out loading {url} ({timeout}s)") from None
+
+        dom = (stdout or "").strip()
+        if dom and ("<html" in dom.lower() or "<!doctype" in dom.lower() or len(dom) > 200):
+            if len(dom) > _MAX_DOM_CHARS:
+                dom = dom[:_MAX_DOM_CHARS]
+            return dom
+        err = (stderr or "").strip()
         raise ToolError(
-            f"Browser {'timed out' if timed_out else 'returned empty DOM'} for {url} ({last_err})"
+            f"Browser returned empty DOM for {url} "
+            f"(exit {proc.returncode}): {err[:300]}"
         )
     finally:
+        if proc is not None and proc.poll() is None:
+            _kill_process_tree(proc)
         shutil.rmtree(root, ignore_errors=True)
+        _BROWSER_BUSY = False
+        try:
+            _BROWSER_LOCK.release()
+        except RuntimeError:
+            pass
 
 
 def _http_get(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
+    timeout = max(5, min(int(timeout or _DEFAULT_TIMEOUT), 30))
+    headers = {
+        "User-Agent": _USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    text = ""
     try:
         import requests
-    except ImportError as exc:
-        raise ToolError("requests is required for HTTP fallback") from exc
-    try:
+
         resp = requests.get(
             url,
-            timeout=max(5, int(timeout)),
-            headers={
-                "User-Agent": _USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-            },
+            timeout=timeout,
+            headers=headers,
             allow_redirects=True,
         )
         resp.raise_for_status()
         text = resp.text or ""
+    except ImportError:
+        # Stdlib fallback — keeps search usable even outside the OMGA venv.
+        import urllib.error
+        import urllib.request
+
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read(_MAX_DOM_CHARS + 1)
+                charset = resp.headers.get_content_charset() or "utf-8"
+                text = raw.decode(charset, errors="replace")
+        except urllib.error.HTTPError as exc:
+            raise ToolError(f"HTTP fetch failed for {url}: {exc}") from exc
+        except Exception as exc:
+            raise ToolError(f"HTTP fetch failed for {url}: {exc}") from exc
     except Exception as exc:
         raise ToolError(f"HTTP fetch failed for {url}: {exc}") from exc
     if len(text) > _MAX_DOM_CHARS:
@@ -209,23 +309,44 @@ def _http_get(url: str, *, timeout: int = _DEFAULT_TIMEOUT) -> str:
     return text
 
 
-def fetch_dom(url: str, *, timeout: int = _DEFAULT_TIMEOUT, prefer: str = "browser") -> dict[str, Any]:
-    """Fetch page DOM via browser (preferred) or HTTP."""
+def fetch_dom(
+    url: str,
+    *,
+    timeout: int = _DEFAULT_TIMEOUT,
+    use_browser: bool = False,
+) -> dict[str, Any]:
+    """Fetch page HTML.
+
+    Default: HTTP only (fast, weak-PC safe). Chromium is spawned **only** when
+    policy allows it — ``mode=chrome``, or ``mode=allow`` + ``use_browser=true``.
+    Calling web_search/browse_page alone never starts a browser.
+    """
     url = _normalize_url(url)
     errors: list[str] = []
-    order = ("browser", "http") if prefer != "http" else ("http", "browser")
-    for mode in order:
+    want_chrome = _chrome_allowed(use_browser=use_browser)
+
+    if want_chrome:
         try:
-            if mode == "browser":
-                if not find_browser():
-                    continue
-                dom = _chrome_dump_dom(url, timeout=timeout)
-                return {"url": url, "engine": "browser", "browser": find_browser(), "html": dom}
-            dom = _http_get(url, timeout=timeout)
-            return {"url": url, "engine": "http", "browser": None, "html": dom}
+            if not find_browser():
+                raise ToolError("Chrome/Chromium binary not found")
+            chrome_timeout = min(int(timeout or _CHROME_TIMEOUT), _CHROME_TIMEOUT)
+            dom = _chrome_dump_dom(url, timeout=chrome_timeout)
+            return {
+                "url": url,
+                "engine": "browser",
+                "browser": find_browser(),
+                "html": dom,
+            }
         except Exception as exc:
-            errors.append(f"{mode}: {exc}")
-    raise ToolError("Could not fetch page. " + " | ".join(errors))
+            errors.append(f"browser: {exc}")
+            # Fall through to HTTP — still useful on weak machines / missing binary.
+
+    try:
+        dom = _http_get(url, timeout=timeout)
+        return {"url": url, "engine": "http", "browser": None, "html": dom}
+    except Exception as exc:
+        errors.append(f"http: {exc}")
+        raise ToolError("Could not fetch page. " + " | ".join(errors)) from exc
 
 
 def _normalize_url(url: str) -> str:
@@ -288,7 +409,6 @@ class _TextExtractor(HTMLParser):
             self.title = text
         self._chunks.append(text + " ")
         if self.links and not self.links[-1]["text"]:
-            # attach text to the most recent anchor still open-ish
             self.links[-1]["text"] = text[:200]
 
     def text(self) -> str:
@@ -309,7 +429,6 @@ def extract_page(html: str, *, base_url: str = "") -> dict[str, Any]:
     text = parser.text()
     if len(text) > _MAX_TEXT_CHARS:
         text = text[:_MAX_TEXT_CHARS] + "\n…[truncated]"
-    # Dedupe links, keep order
     seen: set[str] = set()
     links: list[dict[str, str]] = []
     for link in parser.links:
@@ -335,8 +454,30 @@ def _google_url(query: str) -> str:
     return f"https://www.google.com/search?q={quote_plus(query)}&hl=en&num=10"
 
 
+def _unwrap_ddg_redirect(href: str) -> str:
+    if "duckduckgo.com/l/?" in href or "duckduckgo.com//l/?" in href:
+        qs = parse_qs(urlparse(href).query)
+        if "uddg" in qs:
+            return unquote(qs["uddg"][0])
+    return href
+
+
+def _b64_url(raw: str) -> str:
+    try:
+        padded = raw + "=" * (-len(raw) % 4)
+        for decoder in (base64.urlsafe_b64decode, base64.b64decode):
+            try:
+                out = decoder(padded.encode("ascii", "ignore")).decode("utf-8", "ignore")
+                if out.startswith("http"):
+                    return out
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return ""
+
+
 def _unwrap_redirect(href: str) -> str:
-    """Resolve Bing/DDG/Google click-tracking wrappers to the real URL."""
     href = html_lib.unescape(href or "").strip()
     if not href:
         return href
@@ -366,24 +507,8 @@ def _unwrap_redirect(href: str) -> str:
     return href
 
 
-def _b64_url(raw: str) -> str:
-    try:
-        padded = raw + "=" * (-len(raw) % 4)
-        for decoder in (base64.urlsafe_b64decode, base64.b64decode):
-            try:
-                out = decoder(padded.encode("ascii", "ignore")).decode("utf-8", "ignore")
-                if out.startswith("http"):
-                    return out
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return ""
-
-
 def _parse_ddg_results(html: str, *, limit: int) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
-    # Classic DDG HTML: result blocks with class result__a / result__snippet
     for block in re.finditer(
         r'class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>(.*?)</a>'
         r'.*?(?:class="[^"]*result__snippet[^"]*"[^>]*>(.*?)</(?:a|td|div)>)?',
@@ -398,18 +523,7 @@ def _parse_ddg_results(html: str, *, limit: int) -> list[dict[str, str]]:
         results.append({"title": title, "url": href, "snippet": snippet})
         if len(results) >= limit:
             break
-    if results:
-        return results
-    # Fallback: any outbound links with surrounding text
-    return _parse_generic_results(html, limit=limit)
-
-
-def _unwrap_ddg_redirect(href: str) -> str:
-    if "duckduckgo.com/l/?" in href or "duckduckgo.com//l/?" in href:
-        qs = parse_qs(urlparse(href).query)
-        if "uddg" in qs:
-            return unquote(qs["uddg"][0])
-    return href
+    return results or _parse_generic_results(html, limit=limit)
 
 
 def _parse_bing_results(html: str, *, limit: int) -> list[dict[str, str]]:
@@ -489,11 +603,14 @@ def web_search(
     engine: str = "bing",
     max_results: int = 8,
     timeout: int = _DEFAULT_TIMEOUT,
+    use_browser: bool = False,
 ) -> dict[str, Any]:
     query = (query or "").strip()
     if not query:
         raise ToolError("query is required")
-    max_results = max(1, min(int(max_results or 8), 15))
+    max_results = max(1, min(int(max_results or 8), 12))
+    timeout = max(5, min(int(timeout or _DEFAULT_TIMEOUT), 30))
+    use_browser = bool(use_browser)
     engine = (engine or "bing").lower().strip()
     engines = {
         "bing": ("bing", _bing_url, _parse_bing_results),
@@ -501,19 +618,26 @@ def web_search(
         "ddg": ("duckduckgo", _ddg_url, _parse_ddg_results),
         "google": ("google", _google_url, _parse_google_results),
     }
-    # Bing is default (DDG often serves bot challenges to headless Chrome).
-    order = [engine] + [e for e in ("bing", "duckduckgo", "google") if e != engine and e != "ddg"]
-    errors: list[str] = []
-    info = browser_info()
+    # At most 2 engines via HTTP — never a Chromium storm.
+    primary = "duckduckgo" if engine == "ddg" else engine
+    if primary not in engines:
+        primary = "bing"
+    order = [primary]
+    for alt in ("bing", "duckduckgo"):
+        if alt != primary and alt not in order:
+            order.append(alt)
+            break
 
-    for name in order:
-        key = "duckduckgo" if name == "ddg" else name
-        if key not in engines:
-            continue
+    errors: list[str] = []
+    mode = _cfg_mode()
+
+    for key in order:
         label, build_url, parser = engines[key]
         search_url = build_url(query)
         try:
-            fetched = fetch_dom(search_url, timeout=timeout, prefer="browser")
+            fetched = fetch_dom(
+                search_url, timeout=timeout, use_browser=use_browser
+            )
             results = parser(fetched["html"], limit=max_results)
             if not results:
                 raise ToolError(f"{label} returned no parseable results")
@@ -521,7 +645,9 @@ def web_search(
                 "query": query,
                 "engine": label,
                 "fetch": fetched["engine"],
-                "browser": fetched.get("browser") or info.get("path"),
+                "browser": fetched.get("browser"),
+                "mode": mode,
+                "use_browser": use_browser,
                 "search_url": search_url,
                 "count": len(results),
                 "results": results,
@@ -537,8 +663,12 @@ def browse_page(
     *,
     timeout: int = _DEFAULT_TIMEOUT,
     max_chars: int = _MAX_TEXT_CHARS,
+    use_browser: bool = False,
 ) -> dict[str, Any]:
-    fetched = fetch_dom(url, timeout=timeout, prefer="browser")
+    timeout = max(5, min(int(timeout or _DEFAULT_TIMEOUT), 30))
+    use_browser = bool(use_browser)
+    mode = _cfg_mode()
+    fetched = fetch_dom(url, timeout=timeout, use_browser=use_browser)
     extracted = extract_page(fetched["html"], base_url=fetched["url"])
     text = extracted["text"]
     max_chars = max(500, min(int(max_chars or _MAX_TEXT_CHARS), _MAX_TEXT_CHARS))
@@ -550,6 +680,8 @@ def browse_page(
         "title": extracted["title"],
         "fetch": fetched["engine"],
         "browser": fetched.get("browser"),
+        "mode": mode,
+        "use_browser": use_browser,
         "text": text,
         "truncated": truncated,
         "links": extracted["links"][:20],
@@ -564,24 +696,33 @@ def browser_tools() -> list["Tool"]:
         engine: str = "bing",
         max_results: int = 8,
         timeout: int = _DEFAULT_TIMEOUT,
+        use_browser: bool = False,
     ) -> dict[str, Any]:
         return web_search(
-            query, engine=engine, max_results=max_results, timeout=timeout
+            query,
+            engine=engine,
+            max_results=max_results,
+            timeout=timeout,
+            use_browser=use_browser,
         )
 
     def browse_handler(
         url: str,
         timeout: int = _DEFAULT_TIMEOUT,
         max_chars: int = _MAX_TEXT_CHARS,
+        use_browser: bool = False,
     ) -> dict[str, Any]:
-        return browse_page(url, timeout=timeout, max_chars=max_chars)
+        return browse_page(
+            url, timeout=timeout, max_chars=max_chars, use_browser=use_browser
+        )
 
     return [
         Tool(
             "web_search",
-            "Search the live web with the system Chrome/Chromium browser "
-            "(DuckDuckGo / Bing / Google). Use for up-to-date docs, errors, "
-            "APIs, and facts — never invent from memory when a search is needed.",
+            "Fast live web search over HTTP (no browser process). "
+            "Use one precise query for docs/errors. "
+            "Set use_browser=true only if the site needs JS and policy allows it "
+            "(tools.browser.mode=allow|chrome). Do not call in parallel.",
             search_handler,
             {
                 "parameters": {
@@ -594,15 +735,23 @@ def browser_tools() -> list["Tool"]:
                         "engine": {
                             "type": "string",
                             "enum": ["bing", "duckduckgo", "google"],
-                            "description": "Search engine (default bing; falls back automatically).",
+                            "description": "Search engine (default bing).",
                         },
                         "max_results": {
                             "type": "integer",
-                            "description": "Max results 1–15 (default 8).",
+                            "description": "Max results 1–12 (default 8).",
                         },
                         "timeout": {
                             "type": "integer",
-                            "description": "Seconds to wait for the page (default 45).",
+                            "description": "Seconds to wait (default 20, max 30).",
+                        },
+                        "use_browser": {
+                            "type": "boolean",
+                            "description": (
+                                "If true AND tools.browser.mode is allow/chrome, "
+                                "render with headless Chromium. Default false — "
+                                "never starts Chrome just because this tool ran."
+                            ),
                         },
                     },
                     "required": ["query"],
@@ -611,8 +760,9 @@ def browser_tools() -> list["Tool"]:
         ),
         Tool(
             "browse_page",
-            "Open a URL in system Chrome/Chromium (headless) and return cleaned "
-            "page text + key links. Use after web_search to read a promising result.",
+            "Fetch a URL via HTTP and return cleaned text + links (fast). "
+            "use_browser=true only when JS rendering is required and policy allows. "
+            "Use after web_search on one hit — not in parallel.",
             browse_handler,
             {
                 "parameters": {
@@ -624,11 +774,18 @@ def browser_tools() -> list["Tool"]:
                         },
                         "timeout": {
                             "type": "integer",
-                            "description": "Seconds to wait (default 45).",
+                            "description": "Seconds to wait (default 20, max 30).",
                         },
                         "max_chars": {
                             "type": "integer",
                             "description": "Max characters of extracted text to return.",
+                        },
+                        "use_browser": {
+                            "type": "boolean",
+                            "description": (
+                                "If true AND tools.browser.mode is allow/chrome, "
+                                "use headless Chromium. Default false."
+                            ),
                         },
                     },
                     "required": ["url"],
